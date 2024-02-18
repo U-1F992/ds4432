@@ -10,31 +10,31 @@ int test_init(void)
 
     typedef struct test_case_t
     {
-        ds4432_t *dac;
-        ds4432_i2c_writer_t *i2c;
+        ds4432_t *ds4432;
+        ds4432_i2c_writer_t *writer;
 
         ds4432_error_t expected_ret;
-        ds4432_i2c_writer_t *expected_i2c;
+        ds4432_i2c_writer_t *expected_writer;
     } test_case_t;
 
-    ds4432_t case_1_dac;
+    ds4432_t case_1_ds4432;
 
-    ds4432_i2c_writer_t case_2_i2c;
+    ds4432_i2c_writer_t case_2_writer;
 
-    ds4432_t case_3_dac;
-    ds4432_i2c_writer_t case_3_i2c;
+    ds4432_t case_3_ds4432;
+    ds4432_i2c_writer_t case_3_writer;
 
-    test_case_t cases[] = {{.dac = NULL, /*  */ .i2c = NULL, /*  */ .expected_ret = DS4432_EINVAL},
-                           {.dac = &case_1_dac, .i2c = NULL, /*  */ .expected_ret = DS4432_EINVAL},
-                           {.dac = NULL, /*  */ .i2c = &case_2_i2c, .expected_ret = DS4432_EINVAL},
-                           {.dac = &case_3_dac, .i2c = &case_3_i2c, .expected_ret = DS4432_OK, .expected_i2c = &case_3_i2c}};
+    test_case_t cases[] = {{.ds4432 = NULL, /*     */ .writer = NULL, /*     */ .expected_ret = DS4432_EINVAL},
+                           {.ds4432 = &case_1_ds4432, .writer = NULL, /*     */ .expected_ret = DS4432_EINVAL},
+                           {.ds4432 = NULL, /*     */ .writer = &case_2_writer, .expected_ret = DS4432_EINVAL},
+                           {.ds4432 = &case_3_ds4432, .writer = &case_3_writer, .expected_ret = DS4432_OK, .expected_writer = &case_3_writer}};
     size_t size = sizeof(cases) / sizeof(test_case_t);
 
     for (size_t i = 0; i < size; i++)
     {
         test_case_t case_ = cases[i];
 
-        ds4432_error_t actual_ret = ds4432_init(case_.dac, case_.i2c);
+        ds4432_error_t actual_ret = ds4432_init(case_.ds4432, case_.writer);
         if (case_.expected_ret != actual_ret)
         {
             fprintf(stderr, "index: %d, expected_ret: %s, actual_ret: %s\n",
@@ -47,11 +47,11 @@ int test_init(void)
             continue;
         }
 
-        ds4432_i2c_writer_t *actual_i2c = case_.dac->_i2c;
-        if (case_.expected_i2c != actual_i2c)
+        ds4432_i2c_writer_t *actual_writer = case_.ds4432->_writer;
+        if (case_.expected_writer != actual_writer)
         {
-            fprintf(stderr, "index: %d, expected_i2c: %#x, actual_i2c: %#x\n",
-                    i, case_.expected_i2c, actual_i2c);
+            fprintf(stderr, "index: %d, expected_writer: %#x, actual_writer: %#x\n",
+                    i, case_.expected_writer, actual_writer);
             cnt++;
             continue;
         }
@@ -111,12 +111,12 @@ int test_set(void)
     {
         test_case_t case_ = cases[i];
 
-        ds4432_t dac;
-        test_i2c_writer_t i2c;
-        test_i2c_writer_init(&i2c);
-        assert(ds4432_init(&dac, (ds4432_i2c_writer_t *)&i2c) == DS4432_OK);
+        ds4432_t ds4432;
+        test_i2c_writer_t writer;
+        test_i2c_writer_init(&writer);
+        assert(ds4432_init(&ds4432, (ds4432_i2c_writer_t *)&writer) == DS4432_OK);
 
-        ds4432_error_t actual_ret = ds4432_set(&dac, case_.addr, case_.sign, case_.data);
+        ds4432_error_t actual_ret = ds4432_set(&ds4432, case_.addr, case_.sign, case_.data);
         if (case_.expected_ret != actual_ret)
         {
             fprintf(stderr, "index: %d, expected_ret: %s, actual_ret: %s\n",
@@ -129,7 +129,7 @@ int test_set(void)
             continue;
         }
 
-        size_t actual_size = i2c.last_size;
+        size_t actual_size = writer.last_size;
         if (case_.expected_size != actual_size)
         {
             fprintf(stderr, "index: %d, expected_size: %d, actual_size: %d\n",
@@ -138,7 +138,7 @@ int test_set(void)
             continue;
         }
 
-        uint8_t *actual_data = i2c.last_data;
+        uint8_t *actual_data = writer.last_data;
         if (!test_i2c_data_equals(case_.expected_data, actual_data, actual_size))
         {
             fprintf(stderr, "index: %d,\n", i);

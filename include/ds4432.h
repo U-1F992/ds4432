@@ -6,19 +6,21 @@ extern "C"
 {
 #endif
 
+#include <stddef.h>
 #include <stdint.h>
 
 #define DS4432_SLAVE_ADDRESS ((uint8_t)0x90)
+#define DS4432_DATA_MIN ((uint8_t)0)
 #define DS4432_DATA_MAX ((uint8_t) /* 0b0111'1111*/ 0x7F)
 
     typedef struct ds4432_i2c_writer_t
     {
-        void (*write)(struct ds4432_i2c_writer_t *i2c, uint8_t data[], size_t size);
+        void (*write)(struct ds4432_i2c_writer_t *writer, uint8_t data[], size_t size);
     } ds4432_i2c_writer_t;
 
     typedef struct ds4432_t
     {
-        ds4432_i2c_writer_t *_i2c;
+        ds4432_i2c_writer_t *_writer;
     } ds4432_t;
 
     typedef enum ds4432_error_t
@@ -39,8 +41,8 @@ extern "C"
         DS4432_SOURCE
     } ds4432_sign_bit_t;
 
-    ds4432_error_t ds4432_init(ds4432_t *dac, ds4432_i2c_writer_t *i2c);
-    ds4432_error_t ds4432_set(ds4432_t *dac, ds4432_memory_address_t addr, ds4432_sign_bit_t sign, uint8_t data);
+    ds4432_error_t ds4432_init(ds4432_t *ds4432, ds4432_i2c_writer_t *writer);
+    ds4432_error_t ds4432_set(ds4432_t *ds4432, ds4432_memory_address_t addr, ds4432_sign_bit_t sign, uint8_t data);
 
 #ifdef __cplusplus
 }
