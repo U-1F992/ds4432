@@ -21,11 +21,8 @@ public:
                 return;
             }
 
-            writer->_wire->beginTransmission(DS4432_SLAVE_ADDRESS);
-            for (size_t i = 0; i < size; i++)
-            {
-                writer->_wire->write(data[i]);
-            }
+            writer->_wire->beginTransmission(DS4432_SLAVE_ADDRESS >> 1);
+            writer->_wire->write(data, size);
             writer->_wire->endTransmission();
         };
         _writer._wire = wire;
