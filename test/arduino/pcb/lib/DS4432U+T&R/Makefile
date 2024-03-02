@@ -1,4 +1,5 @@
 ZIP = LIB_DS4432U+T\&R.zip
+URL = https://componentsearchengine.com/part-view/DS4432U%2BT%26R/Analog%20Devices
 
 TMP = tmp
 TMP_DIR = $(TMP)/DS4432U+T\&R
@@ -26,7 +27,7 @@ clean:
 
 $(ZIP):
 	@if [ ! -f $@ ]; then \
-		echo "Download $@ from https://componentsearchengine.com/part-view/DS4432U%2BT%26R/Analog%20Devices"; \
+		echo "Download $@ from $(URL)"; \
 		exit 1; \
 	fi
 

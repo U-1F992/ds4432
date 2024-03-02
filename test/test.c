@@ -6,153 +6,218 @@
 
 int test_init(void)
 {
+    printf("* %s\n", __func__);
     int cnt = 0;
 
-    typedef struct test_case_t
+    typedef struct TestCase
     {
-        ds4432_t *ds4432;
-        ds4432_i2c_writer_t *writer;
+        DS4432 *ds4432;
+        DS4432I2CWriter *writer;
 
-        ds4432_error_t expected_ret;
-        ds4432_i2c_writer_t *expected_writer;
-    } test_case_t;
+        DS4432ErrNo expected_ret;
+        DS4432I2CWriter *expected_writer;
+    } TestCase;
 
-    ds4432_t case_1_ds4432;
+    DS4432 ds4432[4];
+    DS4432I2CWriter writer[4];
 
-    ds4432_i2c_writer_t case_2_writer;
+    TestCase cases[] = {{.ds4432 = NULL, /* */ .writer = NULL, /* */ .expected_ret = DS4432_EINVAL},
+                        {.ds4432 = &ds4432[1], .writer = NULL, /* */ .expected_ret = DS4432_EINVAL},
+                        {.ds4432 = NULL, /* */ .writer = &writer[2], .expected_ret = DS4432_EINVAL},
+                        {.ds4432 = &ds4432[3], .writer = &writer[3], .expected_ret = DS4432_OK, .expected_writer = &writer[3]}};
 
-    ds4432_t case_3_ds4432;
-    ds4432_i2c_writer_t case_3_writer;
-
-    test_case_t cases[] = {{.ds4432 = NULL, /*     */ .writer = NULL, /*     */ .expected_ret = DS4432_EINVAL},
-                           {.ds4432 = &case_1_ds4432, .writer = NULL, /*     */ .expected_ret = DS4432_EINVAL},
-                           {.ds4432 = NULL, /*     */ .writer = &case_2_writer, .expected_ret = DS4432_EINVAL},
-                           {.ds4432 = &case_3_ds4432, .writer = &case_3_writer, .expected_ret = DS4432_OK, .expected_writer = &case_3_writer}};
-    size_t size = sizeof(cases) / sizeof(test_case_t);
-
-    for (size_t i = 0; i < size; i++)
+    TEST_FOR(cases)
     {
-        test_case_t case_ = cases[i];
-
-        ds4432_error_t actual_ret = ds4432_init(case_.ds4432, case_.writer);
-        if (case_.expected_ret != actual_ret)
-        {
-            fprintf(stderr, "index: %d, expected_ret: %s, actual_ret: %s\n",
-                    i, TEST_DS4432_ERROR(case_.expected_ret), TEST_DS4432_ERROR(actual_ret));
-            cnt++;
-            continue;
-        }
+        DS4432ErrNo actual_ret = ds4432_init(case_.ds4432, case_.writer);
+        TEST_ASSERT_EQUAL_DS4432_ERROR_RET(case_.expected_ret, actual_ret)
         if (actual_ret != DS4432_OK)
         {
             continue;
         }
 
-        ds4432_i2c_writer_t *actual_writer = case_.ds4432->_writer;
+        DS4432I2CWriter *actual_writer = case_.ds4432->writer;
         if (case_.expected_writer != actual_writer)
         {
             fprintf(stderr, "index: %d, expected_writer: %#x, actual_writer: %#x\n",
                     i, case_.expected_writer, actual_writer);
             cnt++;
-            continue;
         }
     }
 
     return cnt;
 }
 
-int test_set(void)
+int test_set_out0_sink(void)
 {
+    printf("* %s\n", __func__);
     int cnt = 0;
 
-    typedef struct test_case_t
+    typedef struct TestCase
     {
-        ds4432_memory_address_t addr;
-        ds4432_sign_bit_t sign;
         uint8_t data;
 
-        ds4432_error_t expected_ret;
+        DS4432ErrNo expected_ret;
         uint8_t *expected_data;
         size_t expected_size;
-    } test_case_t;
+    } TestCase;
 
-    test_case_t cases[] = {{.addr = DS4432_OUT0, .sign = DS4432_SINK, /*  */ .data = 0, /*  */ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF8, /* 0b0000'0000 */ 0x00}, .expected_size = 2},
-                           {.addr = DS4432_OUT1, .sign = DS4432_SINK, /*  */ .data = 0, /*  */ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF9, /* 0b0000'0000 */ 0x00}, .expected_size = 2},
-                           {.addr = 0, /*     */ .sign = DS4432_SINK, /*  */ .data = 0, /*  */ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT0, .sign = DS4432_SOURCE, /**/ .data = 0, /*  */ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF8, /* 0b1000'0000 */ 0x80}, .expected_size = 2},
-                           {.addr = DS4432_OUT1, .sign = DS4432_SOURCE, /**/ .data = 0, /*  */ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF9, /* 0b1000'0000 */ 0x80}, .expected_size = 2},
-                           {.addr = 0, /*     */ .sign = DS4432_SOURCE, /**/ .data = 0, /*  */ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT0, .sign = 2, /*            */ .data = 0, /*  */ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT1, .sign = 2, /*            */ .data = 0, /*  */ .expected_ret = DS4432_EINVAL},
-                           {.addr = 0, /*     */ .sign = 2, /*            */ .data = 0, /*  */ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT0, .sign = DS4432_SINK, /*  */ .data = 127, /**/ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF8, /* 0b0111'1111 */ 0x7F}, .expected_size = 2},
-                           {.addr = DS4432_OUT1, .sign = DS4432_SINK, /*  */ .data = 127, /**/ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF9, /* 0b0111'1111 */ 0x7F}, .expected_size = 2},
-                           {.addr = 0, /*     */ .sign = DS4432_SINK, /*  */ .data = 127, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT0, .sign = DS4432_SOURCE, /**/ .data = 127, /**/ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF8, /* 0b1111'1111 */ 0xFF}, .expected_size = 2},
-                           {.addr = DS4432_OUT1, .sign = DS4432_SOURCE, /**/ .data = 127, /**/ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF9, /* 0b1111'1111 */ 0xFF}, .expected_size = 2},
-                           {.addr = 0, /*     */ .sign = DS4432_SOURCE, /**/ .data = 127, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT0, .sign = 2, /*            */ .data = 127, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT1, .sign = 2, /*            */ .data = 127, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = 0, /*     */ .sign = 2, /*            */ .data = 127, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT0, .sign = DS4432_SINK, /*  */ .data = 128, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT1, .sign = DS4432_SINK, /*  */ .data = 128, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = 0, /*     */ .sign = DS4432_SINK, /*  */ .data = 128, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT0, .sign = DS4432_SOURCE, /**/ .data = 128, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT1, .sign = DS4432_SOURCE, /**/ .data = 128, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = 0, /*     */ .sign = DS4432_SOURCE, /**/ .data = 128, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT0, .sign = 2, /*            */ .data = 128, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = DS4432_OUT1, .sign = 2, /*            */ .data = 128, /**/ .expected_ret = DS4432_EINVAL},
-                           {.addr = 0, /*     */ .sign = 2, /*            */ .data = 128, /**/ .expected_ret = DS4432_EINVAL}};
-    size_t size = sizeof(cases) / sizeof(test_case_t);
+    TestCase cases[] = {{.data = 0, /*  */ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF8, /* 0b0000'0000 */ 0x00}, .expected_size = 2},
+                        {.data = 127, /**/ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF8, /* 0b0111'1111 */ 0x7F}, .expected_size = 2},
+                        {.data = 128, /**/ .expected_ret = DS4432_EINVAL}};
 
-    // Nothing is expected to happen.
-    assert(ds4432_set(NULL, DS4432_OUT0, DS4432_SINK, 0) == DS4432_EINVAL);
-
-    for (size_t i = 0; i < size; i++)
+    TEST_FOR(cases)
     {
-        test_case_t case_ = cases[i];
+        DS4432 *ds4432_null = NULL;
+        DS4432ErrNo actual_ret = ds4432_set_out0_sink(ds4432_null, case_.data);
+        TEST_ASSERT_EQUAL_DS4432_ERROR_RET(DS4432_EINVAL, actual_ret);
 
-        ds4432_t ds4432;
-        test_i2c_writer_t writer;
+        DS4432 ds4432;
+        TestI2CWriter writer;
         test_i2c_writer_init(&writer);
-        assert(ds4432_init(&ds4432, (ds4432_i2c_writer_t *)&writer) == DS4432_OK);
+        assert(ds4432_init(&ds4432, (DS4432I2CWriter *)&writer) == DS4432_OK);
 
-        ds4432_error_t actual_ret = ds4432_set(&ds4432, case_.addr, case_.sign, case_.data);
-        if (case_.expected_ret != actual_ret)
-        {
-            fprintf(stderr, "index: %d, expected_ret: %s, actual_ret: %s\n",
-                    i, TEST_DS4432_ERROR(case_.expected_ret), TEST_DS4432_ERROR(actual_ret));
-            cnt++;
-            continue;
-        }
+        actual_ret = ds4432_set_out0_sink(&ds4432, case_.data);
+        TEST_ASSERT_EQUAL_DS4432_ERROR_RET(case_.expected_ret, actual_ret);
         if (actual_ret != DS4432_OK)
         {
             continue;
         }
 
+        uint8_t *actual_data = writer.last_data;
         size_t actual_size = writer.last_size;
-        if (case_.expected_size != actual_size)
+        TEST_ASSERT_EQUAL_I2C_WRITTEN(case_.expected_data, case_.expected_size, actual_data, actual_size);
+    }
+
+    return cnt;
+}
+
+int test_set_out0_source(void)
+{
+    printf("* %s\n", __func__);
+    int cnt = 0;
+
+    typedef struct TestCase
+    {
+        uint8_t data;
+
+        DS4432ErrNo expected_ret;
+        uint8_t *expected_data;
+        size_t expected_size;
+    } TestCase;
+
+    TestCase cases[] = {{.data = 0, /*  */ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF8, /* 0b1000'0000 */ 0x80}, .expected_size = 2},
+                        {.data = 127, /**/ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF8, /* 0b1111'1111 */ 0xFF}, .expected_size = 2},
+                        {.data = 128, /**/ .expected_ret = DS4432_EINVAL}};
+
+    TEST_FOR(cases)
+    {
+        DS4432 *ds4432_null = NULL;
+        DS4432ErrNo actual_ret = ds4432_set_out0_source(ds4432_null, case_.data);
+        TEST_ASSERT_EQUAL_DS4432_ERROR_RET(DS4432_EINVAL, actual_ret);
+
+        DS4432 ds4432;
+        TestI2CWriter writer;
+        test_i2c_writer_init(&writer);
+        assert(ds4432_init(&ds4432, (DS4432I2CWriter *)&writer) == DS4432_OK);
+
+        actual_ret = ds4432_set_out0_source(&ds4432, case_.data);
+        TEST_ASSERT_EQUAL_DS4432_ERROR_RET(case_.expected_ret, actual_ret);
+        if (actual_ret != DS4432_OK)
         {
-            fprintf(stderr, "index: %d, expected_size: %d, actual_size: %d\n",
-                    i, case_.expected_size, actual_size);
-            cnt++;
             continue;
         }
 
         uint8_t *actual_data = writer.last_data;
-        if (!test_i2c_data_equals(case_.expected_data, actual_data, actual_size))
+        size_t actual_size = writer.last_size;
+        TEST_ASSERT_EQUAL_I2C_WRITTEN(case_.expected_data, case_.expected_size, actual_data, actual_size);
+    }
+
+    return cnt;
+}
+
+int test_set_out1_sink(void)
+{
+    printf("* %s\n", __func__);
+    int cnt = 0;
+
+    typedef struct TestCase
+    {
+        uint8_t data;
+
+        DS4432ErrNo expected_ret;
+        uint8_t *expected_data;
+        size_t expected_size;
+    } TestCase;
+
+    TestCase cases[] = {{.data = 0, /*  */ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF9, /* 0b0000'0000 */ 0x00}, .expected_size = 2},
+                        {.data = 127, /**/ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF9, /* 0b0111'1111 */ 0x7F}, .expected_size = 2},
+                        {.data = 128, /**/ .expected_ret = DS4432_EINVAL}};
+
+    TEST_FOR(cases)
+    {
+        DS4432 *ds4432_null = NULL;
+        DS4432ErrNo actual_ret = ds4432_set_out1_sink(ds4432_null, case_.data);
+        TEST_ASSERT_EQUAL_DS4432_ERROR_RET(DS4432_EINVAL, actual_ret);
+
+        DS4432 ds4432;
+        TestI2CWriter writer;
+        test_i2c_writer_init(&writer);
+        assert(ds4432_init(&ds4432, (DS4432I2CWriter *)&writer) == DS4432_OK);
+
+        actual_ret = ds4432_set_out1_sink(&ds4432, case_.data);
+        TEST_ASSERT_EQUAL_DS4432_ERROR_RET(case_.expected_ret, actual_ret);
+        if (actual_ret != DS4432_OK)
         {
-            fprintf(stderr, "index: %d,\n", i);
-            for (size_t j = 0; j < actual_size; j++)
-            {
-                if (case_.expected_data[j] != actual_data[j])
-                {
-                    fprintf(stderr, "  expected_data[%d]: %d, actual_data[%d]: %d\n",
-                            j, case_.expected_data[j], j, actual_data[j]);
-                }
-            }
-            cnt++;
             continue;
         }
+
+        uint8_t *actual_data = writer.last_data;
+        size_t actual_size = writer.last_size;
+        TEST_ASSERT_EQUAL_I2C_WRITTEN(case_.expected_data, case_.expected_size, actual_data, actual_size);
+    }
+
+    return cnt;
+}
+
+int test_set_out1_source(void)
+{
+    printf("* %s\n", __func__);
+    int cnt = 0;
+
+    typedef struct TestCase
+    {
+        uint8_t data;
+
+        DS4432ErrNo expected_ret;
+        uint8_t *expected_data;
+        size_t expected_size;
+    } TestCase;
+
+    TestCase cases[] = {{.data = 0, /*  */ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF9, /* 0b1000'0000 */ 0x80}, .expected_size = 2},
+                        {.data = 127, /**/ .expected_ret = DS4432_OK, .expected_data = (uint8_t[]){0xF9, /* 0b1111'1111 */ 0xFF}, .expected_size = 2},
+                        {.data = 128, /**/ .expected_ret = DS4432_EINVAL}};
+
+    TEST_FOR(cases)
+    {
+        DS4432 *ds4432_null = NULL;
+        DS4432ErrNo actual_ret = ds4432_set_out1_source(ds4432_null, case_.data);
+        TEST_ASSERT_EQUAL_DS4432_ERROR_RET(DS4432_EINVAL, actual_ret);
+
+        DS4432 ds4432;
+        TestI2CWriter writer;
+        test_i2c_writer_init(&writer);
+        assert(ds4432_init(&ds4432, (DS4432I2CWriter *)&writer) == DS4432_OK);
+
+        actual_ret = ds4432_set_out1_source(&ds4432, case_.data);
+        TEST_ASSERT_EQUAL_DS4432_ERROR_RET(case_.expected_ret, actual_ret);
+        if (actual_ret != DS4432_OK)
+        {
+            continue;
+        }
+
+        uint8_t *actual_data = writer.last_data;
+        size_t actual_size = writer.last_size;
+        TEST_ASSERT_EQUAL_I2C_WRITTEN(case_.expected_data, case_.expected_size, actual_data, actual_size);
     }
 
     return cnt;
@@ -162,10 +227,11 @@ int main(void)
 {
     int cnt = 0;
 
-    printf("* test_init\n");
     cnt += test_init();
-    printf("* test_set\n");
-    cnt += test_set();
+    cnt += test_set_out0_sink();
+    cnt += test_set_out0_source();
+    cnt += test_set_out1_sink();
+    cnt += test_set_out1_source();
 
     if (cnt == 0)
     {
