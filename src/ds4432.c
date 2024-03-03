@@ -1,6 +1,7 @@
 #include <ds4432.h>
+#include "internal.h"
 
-ds4432_error_t ds4432_init(ds4432_t *ds4432, ds4432_i2c_writer_t *writer)
+DS4432ErrNo ds4432_init(DS4432 *ds4432, DS4432I2CWriter *writer)
 {
     if (ds4432 == NULL ||
         writer == NULL)
@@ -8,25 +9,27 @@ ds4432_error_t ds4432_init(ds4432_t *ds4432, ds4432_i2c_writer_t *writer)
         return DS4432_EINVAL;
     }
 
-    ds4432->_writer = writer;
+    ds4432->writer = writer;
 
     return DS4432_OK;
 }
 
-ds4432_error_t ds4432_set(ds4432_t *ds4432, ds4432_memory_address_t addr, ds4432_sign_bit_t sign, uint8_t data)
+DS4432ErrNo ds4432_set_out0_sink(DS4432 *ds4432, uint8_t data)
 {
-    if (ds4432 == NULL ||
-        (addr != DS4432_OUT0 && addr != DS4432_OUT1) ||
-        (sign != DS4432_SINK && sign != DS4432_SOURCE) ||
-        DS4432_DATA_MAX < data)
-    {
-        return DS4432_EINVAL;
-    }
+    return ds4432_internal_set(ds4432, DS4432_OUT0, DS4432_SINK, data);
+}
 
-    ds4432->_writer->write(ds4432->_writer,
-                           (uint8_t[]){(uint8_t)addr,
-                                       ((uint8_t)sign << 7) | data},
-                           2);
+DS4432ErrNo ds4432_set_out0_source(DS4432 *ds4432, uint8_t data)
+{
+    return ds4432_internal_set(ds4432, DS4432_OUT0, DS4432_SOURCE, data);
+}
 
-    return DS4432_OK;
+DS4432ErrNo ds4432_set_out1_sink(DS4432 *ds4432, uint8_t data)
+{
+    return ds4432_internal_set(ds4432, DS4432_OUT1, DS4432_SINK, data);
+}
+
+DS4432ErrNo ds4432_set_out1_source(DS4432 *ds4432, uint8_t data)
+{
+    return ds4432_internal_set(ds4432, DS4432_OUT1, DS4432_SOURCE, data);
 }
